@@ -13,11 +13,11 @@ export async function sendNewsAlert(items: NewsItem[]): Promise<void> {
         : "#CRYPTO";
 
     const text = [
-      `📰 *${escapeMarkdown(item.title)}*`,
+      `📰 <b>${escapeHtml(item.title)}</b>`,
       ``,
       `${currencies}`,
-      `🔗 [記事を読む](${item.url})`,
-      `📡 ${escapeMarkdown(item.source)}`,
+      `🔗 <a href="${item.url}">記事を読む</a>`,
+      `📡 ${escapeHtml(item.source)}`,
     ].join("\n");
 
     try {
@@ -27,14 +27,14 @@ export async function sendNewsAlert(items: NewsItem[]): Promise<void> {
         body: JSON.stringify({
           chat_id: chatId,
           text,
-          parse_mode: "MarkdownV2",
+          parse_mode: "HTML",
           disable_web_page_preview: false,
         }),
       });
 
       if (!res.ok) {
         const err = await res.json();
-        console.error("[telegram] Send failed:", err);
+        console.error("[telegram] Send failed:", JSON.stringify(err));
       }
 
       await sleep(1000);
@@ -44,8 +44,11 @@ export async function sendNewsAlert(items: NewsItem[]): Promise<void> {
   }
 }
 
-function escapeMarkdown(text: string): string {
-  return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, "\\$&");
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 function sleep(ms: number): Promise<void> {
