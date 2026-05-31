@@ -1,4 +1,11 @@
-import type { NewsItem } from "./cryptopanic";
+export interface NewsItem {
+  id: string;
+  title: string;
+  url: string;
+  source: string;
+  publishedAt: string;
+  currencies: string[];
+}
 
 interface CCNewsArticle {
   id: string;
@@ -29,7 +36,8 @@ export async function fetchCryptoCompareNews(symbols: string[]): Promise<NewsIte
     const data = await res.json();
     const articles: CCNewsArticle[] = data.Data || [];
 
-    const cutoff = Date.now() / 1000 - 30 * 60;
+    // 過去60分以内（15分cron × 4、余裕を持たせる）
+    const cutoff = Date.now() / 1000 - 60 * 60;
 
     return articles
       .filter((article) => {

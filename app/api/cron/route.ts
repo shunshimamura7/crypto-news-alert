@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTop200Symbols } from "@/lib/coingecko";
-import { fetchCryptoPanicNews } from "@/lib/cryptopanic";
 import { fetchCryptoCompareNews } from "@/lib/cryptocompare";
 import { filterUnsent, markAsSent } from "@/lib/kv";
 import { sendNewsAlert } from "@/lib/telegram";
-import type { NewsItem } from "@/lib/cryptopanic";
 
 export const maxDuration = 60;
 
@@ -20,16 +18,7 @@ export async function GET(req: NextRequest) {
     const symbols = await getTop200Symbols();
     console.log(`[cron] Monitoring ${symbols.length} symbols`);
 
-    const [panicNews, compareNews] = await Promise.allSettled([
-      fetchCryptoPanicNews(symbols),
-      fetchCryptoCompareNews(symbols),
-    ]);
-
-    const allNews: NewsItem[] = [
-      ...(panicNews.status === "fulfilled" ? panicNews.value : []),
-      ...(compareNews.status === "fulfilled" ? compareNews.value : []),
-    ];
-
+    const allNews = await fetchCryptoCompareNews(symbols);
     console.log(`[cron] Fetched ${allNews.length} articles total`);
 
     if (allNews.length === 0) {

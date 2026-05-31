@@ -1,4 +1,4 @@
-import type { NewsItem } from "./cryptopanic";
+import type { NewsItem } from "./cryptocompare";
 
 const TELEGRAM_API = "https://api.telegram.org";
 
