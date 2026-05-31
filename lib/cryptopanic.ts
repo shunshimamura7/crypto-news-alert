@@ -28,7 +28,7 @@ export async function fetchCryptoPanicNews(symbols: string[]): Promise<NewsItem[
     ...(apiKey ? { auth_token: apiKey } : {}),
     public: "true",
     kind: "news",
-    filter: "important",
+    filter: "rising",
   });
 
   try {
