@@ -12,13 +12,17 @@ export async function sendNewsAlert(items: NewsItem[]): Promise<void> {
         ? item.currencies.map((c) => `#${c}`).join(" ")
         : "#CRYPTO";
 
+    const icon = item.isImportant ? "🚨" : "📰";
+    const label = item.isImportant ? " <b>[重要]</b>" : "";
+
     const text = [
-      `📰 <b>${escapeHtml(item.title)}</b>`,
+      `${icon}${label} <b>${escapeHtml(item.title)}</b>`,
       ``,
       `${currencies}`,
       `🔗 <a href="${item.url}">記事を読む</a>`,
       `📡 ${escapeHtml(item.source)}`,
-    ].join("\n");
+    ].join("
+");
 
     try {
       const res = await fetch(`${TELEGRAM_API}/bot${token}/sendMessage`, {
