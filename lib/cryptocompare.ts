@@ -36,8 +36,8 @@ export async function fetchCryptoCompareNews(symbols: string[]): Promise<NewsIte
     const data = await res.json();
     const articles: CCNewsArticle[] = data.Data || [];
 
-    // 過去24時間（本番は60分に戻す）
-    const cutoff = Date.now() / 1000 - 24 * 60 * 60;
+    // 過去60分以内（15分cron × 4、余裕を持たせる）
+    const cutoff = Date.now() / 1000 - 60 * 60;
 
     return articles
       .filter((article) => {
