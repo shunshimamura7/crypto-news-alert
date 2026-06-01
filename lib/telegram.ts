@@ -12,17 +12,18 @@ export async function sendNewsAlert(items: NewsItem[]): Promise<void> {
         ? item.currencies.map((c) => `#${c}`).join(" ")
         : "#CRYPTO";
 
-    const icon = item.isImportant ? "🚨" : "📰";
-    const label = item.isImportant ? " <b>[重要]</b>" : "";
+    const icon = item.score >= 8 ? "🚀" : item.score >= 5 ? "🚨" : "📰";
+    const scoreBar = buildScoreBar(item.score);
+    const labelLine = item.scoreLabel ? `${item.scoreLabel}` : "";
 
-    const text = [
-      `${icon}${label} <b>${escapeHtml(item.title)}</b>`,
+    const lines = [
+      `${icon} <b>${escapeHtml(item.title)}</b>`,
       ``,
+      labelLine ? `${labelLine}` : null,
+      `📊 ${scoreBar} (${item.score}pt)`,
       `${currencies}`,
-      `🔗 <a href="${item.url}">記事を読む</a>`,
-      `📡 ${escapeHtml(item.source)}`,
-    ].join("
-");
+      `🔗 <a href="${item.url}">記事を読む</a>  |  📡 ${escapeHtml(item.source)}`,
+    ].filter((l) => l !== null).join("\n");
 
     try {
       const res = await fetch(`${TELEGRAM_API}/bot${token}/sendMessage`, {
@@ -30,7 +31,7 @@ export async function sendNewsAlert(items: NewsItem[]): Promise<void> {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           chat_id: chatId,
-          text,
+          text: lines,
           parse_mode: "HTML",
           disable_web_page_preview: false,
         }),
@@ -46,6 +47,12 @@ export async function sendNewsAlert(items: NewsItem[]): Promise<void> {
       console.error("[telegram] Request failed:", err);
     }
   }
+}
+
+function buildScoreBar(score: number): string {
+  const clamped = Math.max(0, Math.min(10, score));
+  const filled = Math.round(clamped);
+  return "█".repeat(filled) + "░".repeat(10 - filled);
 }
 
 function escapeHtml(text: string): string {
