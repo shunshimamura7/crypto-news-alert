@@ -19,15 +19,15 @@ export async function GET(req: NextRequest) {
     console.log(`[cron] Monitoring ${symbols.length} symbols`);
 
     const allNews = await fetchCryptoCompareNews(symbols);
-    console.log(`[cron] Fetched ${allNews.length} articles total`);
+    console.log(`[cron] Fetched ${allNews.length} scored articles`);
 
     if (allNews.length === 0) {
       return NextResponse.json({ sent: 0, message: "No news found" });
     }
 
-    const allIds = allNews.map((n) => n.id);
+    const allIds    = allNews.map((n) => n.id);
     const unsentIds = new Set(await filterUnsent(allIds));
-    const newItems = allNews.filter((n) => unsentIds.has(n.id));
+    const newItems  = allNews.filter((n) => unsentIds.has(n.id));
 
     console.log(`[cron] ${newItems.length} new articles to send`);
 
@@ -37,11 +37,16 @@ export async function GET(req: NextRequest) {
 
     const toSend = newItems.slice(0, 10);
 
-    await sendNewsAlert(toSend);
+    // ログ：送信内容を記録
+    toSend.forEach((n) => {
+      console.log(`[cron] Sending: [${n.score}pt] ${n.scoreLabel} | ${n.title}`);
+    });
+
+    const sent = await sendNewsAlert(toSend);
     await markAsSent(toSend.map((n) => n.id));
 
-    console.log(`[cron] Sent ${toSend.length} alerts`);
-    return NextResponse.json({ sent: toSend.length });
+    console.log(`[cron] Done. Sent ${sent}/${toSend.length} alerts`);
+    return NextResponse.json({ sent, titles: toSend.map((n) => n.title) });
   } catch (err) {
     console.error("[cron] Fatal error:", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
