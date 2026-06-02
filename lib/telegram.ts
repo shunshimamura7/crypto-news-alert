@@ -9,11 +9,11 @@ function getIcon(score: number): string {
 }
 
 function buildScoreBar(score: number): string {
-  // 20ブロック・5pt刻み（40pt = 8/20ブロック = 視覚的に40%）
   const clamped = Math.max(0, Math.min(100, score));
   const filled  = Math.round(clamped / 5);
   const empty   = 20 - filled;
-  return `${"█".repeat(filled)}${"░".repeat(empty)} ${score}/100`;
+  const block   = score >= 80 ? "🟥" : score >= 50 ? "🟧" : "🟨";
+  return `${score}/100 ${block.repeat(filled)}${"░".repeat(empty)}`;
 }
 
 function escapeHtml(text: string): string {
