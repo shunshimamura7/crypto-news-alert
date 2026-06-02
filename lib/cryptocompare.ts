@@ -26,185 +26,223 @@ interface KeywordRule {
   label: string;
 }
 
+// ネガティブ絶対ドロップ（スコア計算前に排除）
+const DROP_KEYWORDS: string[] = [
+  'hack', 'hacked', 'hacking',
+  'exploit', 'exploited',
+  'stolen', 'drained',
+  'rug pull', 'rugpull',
+  'scam', 'fraud', 'phishing',
+  'breach', 'attack',
+  'bankruptcy', 'bankrupt', 'insolvent', 'insolvency',
+  'collapse', 'collapsed',
+  'shutdown', 'shuts down',
+  'freezes withdrawals', 'suspend withdrawals',
+  'exit scam',
+];
+
+// スコアリングルール（0〜100スケール、カテゴリキャップ制）
 const SCORING_RULES: KeywordRule[] = [
   {
-    score: 10,
-    label: "🚀 取引所上場",
+    score: 100,
+    label: "🚀 取引所上場（確定）",
     keywords: [
-      'listed on coinbase', 'coinbase listing', 'listed on binance', 'binance listing',
-      'listed on kraken', 'listed on upbit', 'listed on bithumb', 'listed on bybit',
-      'listed on okx', 'listed on kucoin', 'new listing',
+      'listed on coinbase', 'coinbase listing',
+      'listed on binance', 'binance listing',
+      'listed on kraken', 'listed on upbit',
+      'listed on bithumb', 'listed on bybit',
+      'listed on okx', 'listed on kucoin',
+      'new listing',
     ],
   },
   {
-    score: 10,
+    score: 95,
     label: "🚀 ETF承認",
     keywords: [
-      'etf approved', 'etf approval', 'sec approves', 'sec approved etf',
-      'spot etf', 'bitcoin etf approved', 'ethereum etf approved',
+      'etf approved', 'etf approval',
+      'sec approves', 'sec approved etf',
+      'spot etf', 'bitcoin etf approved',
+      'ethereum etf approved',
     ],
   },
   {
-    score: 9,
+    score: 90,
     label: "🚀 国家・政府採用",
     keywords: [
-      'legal tender', 'national reserve', 'strategic reserve', 'government adopts',
-      'country adopts', 'nation adopts', 'sovereign wealth',
+      'legal tender', 'national reserve',
+      'strategic reserve', 'government adopts',
+      'country adopts', 'nation adopts',
+      'sovereign wealth',
     ],
   },
   {
-    score: 9,
-    label: "🚀 大手機関採用",
+    score: 88,
+    label: "🚀 大手機関買い",
     keywords: [
-      'blackrock buys', 'blackrock acquires', 'fidelity buys', 'microstrategy buys',
-      'adds bitcoin', 'adds crypto', 'buys bitcoin', 'purchases bitcoin',
+      'blackrock buys', 'blackrock acquires',
+      'fidelity buys', 'microstrategy buys',
+      'adds bitcoin', 'adds crypto',
+      'buys bitcoin', 'purchases bitcoin',
       'treasury buys', 'corporate treasury',
     ],
   },
   {
-    score: 8,
-    label: "🚀 大型提携・統合",
+    score: 80,
+    label: "🚀 大型提携・統合（大手）",
     keywords: [
-      'partners with visa', 'partners with mastercard', 'partners with paypal',
-      'partners with google', 'partners with amazon', 'partners with apple',
+      'partners with visa', 'partners with mastercard',
+      'partners with paypal', 'partners with google',
+      'partners with amazon', 'partners with apple',
       'partners with microsoft', 'partners with samsung',
-      'visa integration', 'mastercard integration', 'paypal integration',
+      'visa integration', 'mastercard integration',
+      'paypal integration',
     ],
   },
   {
-    score: 8,
+    score: 78,
     label: "🚀 大型資金調達",
     keywords: [
-      'raises $1 billion', 'raises $500 million', 'raises $200 million',
-      '$1b funding', '$500m funding', 'series c', 'series d',
+      'raises $1 billion', 'raises $500 million',
+      'raises $200 million', '$1b funding',
+      '$500m funding', 'series c', 'series d',
     ],
   },
   {
-    score: 7,
+    score: 70,
     label: "🚨 上場・規制承認",
     keywords: [
-      'listing', 'listed', 'approved', 'approval', 'sec approves', 'cftc approves',
+      'listing', 'listed', 'approved', 'approval',
+      'sec approves', 'cftc approves',
       'regulatory approval', 'license granted', 'licensed',
     ],
   },
   {
-    score: 7,
+    score: 68,
     label: "🚨 メジャーアップグレード",
     keywords: [
-      'mainnet launch', 'mainnet upgrade', 'major upgrade', 'protocol upgrade',
-      'network upgrade', 'hard fork', 'ethereum upgrade', 'layer 2 launch',
+      'mainnet launch', 'mainnet upgrade',
+      'major upgrade', 'protocol upgrade',
+      'network upgrade', 'hard fork',
+      'ethereum upgrade', 'layer 2 launch',
     ],
   },
   {
-    score: 6,
+    score: 60,
     label: "🚨 大型提携",
     keywords: [
-      'partnership', 'partners with', 'collaboration', 'integrates with',
-      'strategic partnership', 'joint venture', 'signs deal',
+      'partnership', 'partners with',
+      'collaboration', 'integrates with',
+      'strategic partnership', 'joint venture',
+      'signs deal',
     ],
   },
   {
-    score: 6,
+    score: 58,
     label: "🚨 機関投資家動向",
     keywords: [
-      'blackrock', 'fidelity', 'jpmorgan', 'goldman sachs', 'morgan stanley',
-      'hedge fund', 'institutional', 'asset manager', 'investment fund',
+      'blackrock', 'fidelity', 'jpmorgan',
+      'goldman sachs', 'morgan stanley',
+      'hedge fund', 'institutional',
+      'asset manager', 'investment fund',
     ],
   },
   {
-    score: 6,
-    label: "🚨 エアドロップ・特典",
+    score: 55,
+    label: "🚨 エアドロップ",
     keywords: [
-      'airdrop', 'token distribution', 'free tokens', 'snapshot',
+      'airdrop', 'token distribution',
+      'free tokens', 'snapshot',
     ],
   },
   {
-    score: 5,
-    label: "🚨 規制・法律動向",
+    score: 45,
+    label: "📰 規制・法律動向",
     keywords: [
-      'sec', 'cftc', 'regulation', 'congress', 'senate', 'legislation',
-      'crypto bill', 'crypto law', 'framework', 'policy',
+      'sec', 'cftc', 'regulation', 'congress',
+      'senate', 'legislation', 'crypto bill',
+      'crypto law', 'framework', 'policy',
     ],
   },
   {
-    score: 5,
-    label: "🚨 マクロ経済",
+    score: 43,
+    label: "📰 マクロ経済",
     keywords: [
-      'fed cuts', 'rate cut', 'interest rate cut', 'federal reserve cuts',
-      'fomc', 'inflation data', 'cpi data', 'jobs report',
+      'fed cuts', 'rate cut', 'interest rate cut',
+      'federal reserve cuts', 'fomc',
+      'inflation data', 'cpi data', 'jobs report',
     ],
   },
   {
-    score: 5,
-    label: "🚨 大型資金",
+    score: 40,
+    label: "📰 大型資金",
     keywords: [
-      'billion', '$100 million', '$200 million', '$500 million',
-      'investment', 'acquisition', 'acquired', 'merger',
+      'billion', '$100 million', '$200 million',
+      '$500 million', 'acquisition', 'acquired', 'merger',
     ],
   },
   {
-    score: 5,
-    label: "🚨 焼却・供給削減",
+    score: 38,
+    label: "📰 焼却・供給削減",
     keywords: [
-      'burn', 'token burn', 'buyback', 'supply reduction', 'deflationary',
+      'burn', 'token burn', 'buyback',
+      'supply reduction', 'deflationary',
     ],
   },
   {
-    score: -5,
-    label: "❌ ハック・詐欺",
+    score: -20,
+    label: "⚠️ 規制禁止",
     keywords: [
-      'hack', 'hacked', 'exploit', 'exploited', 'stolen', 'drained',
-      'rug pull', 'scam', 'fraud', 'phishing', 'breach',
+      'ban', 'banned', 'bans crypto',
+      'prohibits', 'crackdown',
+      'enforcement action', 'charges',
+      'lawsuit', 'sued',
     ],
   },
   {
-    score: -5,
-    label: "❌ 上場廃止・破綻",
+    score: -10,
+    label: "⚠️ ネガティブ規制",
     keywords: [
-      'delist', 'delisted', 'bankruptcy', 'bankrupt', 'insolvent', 'insolvency',
-      'collapse', 'shutdown', 'suspended', 'freezes withdrawals',
-    ],
-  },
-  {
-    score: -4,
-    label: "❌ 規制禁止",
-    keywords: [
-      'ban', 'banned', 'bans crypto', 'prohibits', 'crackdown',
-      'enforcement action', 'charges', 'lawsuit', 'sued',
-    ],
-  },
-  {
-    score: -3,
-    label: "❌ ネガティブ規制",
-    keywords: [
-      'rejected', 'rejects', 'denies', 'denied', 'blocks', 'blocked',
+      'rejected', 'rejects', 'denies',
+      'denied', 'blocks', 'blocked',
     ],
   },
 ];
 
-const MIN_SCORE_WITH_SYMBOL = 2;
-const MIN_SCORE_WITHOUT_SYMBOL = 5;
+const MIN_SCORE_WITH_SYMBOL    = 30;
+const MIN_SCORE_WITHOUT_SYMBOL = 55;
 
-function scoreNews(title: string): { score: number; label: string } {
+// nullを返したらドロップ（通知しない）
+function scoreNews(title: string): { score: number; label: string } | null {
   const lower = title.toLowerCase();
+
+  // ① ネガティブ絶対ドロップ
+  for (const kw of DROP_KEYWORDS) {
+    if (lower.includes(kw)) return null;
+  }
+
+  // ② カテゴリキャップ付きスコアリング（各カテゴリ1回だけ加算）
   let totalScore = 0;
-  let topLabel = "";
-  let topScore = -999;
+  let topLabel   = "";
+  let topScore   = -999;
 
   for (const rule of SCORING_RULES) {
-    for (const kw of rule.keywords) {
-      if (lower.includes(kw)) {
-        totalScore += rule.score;
-        if (rule.score > topScore) {
-          topScore = rule.score;
-          topLabel = rule.label;
-        }
-        break;
+    const hit = rule.keywords.some((kw) => lower.includes(kw));
+    if (hit) {
+      totalScore += rule.score;
+      if (rule.score > topScore) {
+        topScore = rule.score;
+        topLabel = rule.label;
       }
     }
   }
 
-  return { score: totalScore, label: topLabel };
+  // ③ スコアが0以下もドロップ
+  if (totalScore <= 0) return null;
+
+  // ④ 上限100キャップ
+  const capped = Math.min(totalScore, 100);
+
+  return { score: capped, label: topLabel };
 }
 
 function matchSymbols(text: string, symbols: string[]): string[] {
@@ -221,7 +259,6 @@ export async function fetchCryptoCompareNews(
   top200Symbols: string[]
 ): Promise<NewsItem[]> {
   const apiKey = process.env.CRYPTOCOMPARE_API_KEY;
-
   const headers: Record<string, string> = {
     Accept: "application/json",
     ...(apiKey ? { authorization: `Apikey ${apiKey}` } : {}),
@@ -232,26 +269,27 @@ export async function fetchCryptoCompareNews(
       "https://min-api.cryptocompare.com/data/v2/news/?lang=EN&sortOrder=popular",
       { headers }
     );
-
     if (!res.ok) throw new Error(`CryptoCompare error: ${res.status}`);
 
     const data = await res.json();
     const articles: CCNewsArticle[] = data.Data || [];
-
     const cutoff = Date.now() / 1000 - 60 * 60;
     const results: NewsItem[] = [];
 
     for (const article of articles) {
       if (article.published_on < cutoff) continue;
 
+      // スコアリング（nullならドロップ）
+      const scored = scoreNews(article.title);
+      if (scored === null) continue;
+
       const text = `${article.categories} ${article.tags || ""}`.toUpperCase();
       const matchedSymbols = matchSymbols(text, top200Symbols);
-      const { score, label } = scoreNews(article.title);
 
       const hasSymbol = matchedSymbols.length > 0;
-      const minScore = hasSymbol ? MIN_SCORE_WITH_SYMBOL : MIN_SCORE_WITHOUT_SYMBOL;
+      const minScore  = hasSymbol ? MIN_SCORE_WITH_SYMBOL : MIN_SCORE_WITHOUT_SYMBOL;
 
-      if (score >= minScore) {
+      if (scored.score >= minScore) {
         results.push({
           id: `cc_${article.id}`,
           title: article.title,
@@ -259,9 +297,9 @@ export async function fetchCryptoCompareNews(
           source: article.source,
           publishedAt: new Date(article.published_on * 1000).toISOString(),
           currencies: matchedSymbols,
-          isImportant: score >= 5,
-          score,
-          scoreLabel: label,
+          isImportant: scored.score >= 50,
+          score: scored.score,
+          scoreLabel: scored.label,
         });
       }
     }
