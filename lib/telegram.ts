@@ -9,9 +9,10 @@ function getIcon(score: number): string {
 }
 
 function buildScoreBar(score: number): string {
+  // 10ブロック・10pt刻み（1行に収まる）
   const clamped = Math.max(0, Math.min(100, score));
-  const filled  = Math.round(clamped / 5);
-  const empty   = 20 - filled;
+  const filled  = Math.round(clamped / 10);
+  const empty   = 10 - filled;
   const block   = score >= 80 ? "🟥" : score >= 50 ? "🟧" : "🟨";
   return `${score}/100 ${block.repeat(filled)}${"░".repeat(empty)}`;
 }
