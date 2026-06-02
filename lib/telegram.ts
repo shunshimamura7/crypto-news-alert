@@ -9,14 +9,11 @@ function getIcon(score: number): string {
 }
 
 function buildScoreBar(score: number): string {
-  // 5pt刻み・20ブロックで0〜100を表現
+  // 20ブロック・5pt刻み（40pt = 8/20ブロック = 視覚的に40%）
   const clamped = Math.max(0, Math.min(100, score));
   const filled  = Math.round(clamped / 5);
   const empty   = 20 - filled;
-
-  // スコア帯で色を変える
-  const block = score >= 80 ? "🟥" : score >= 50 ? "🟧" : "🟨";
-  return block.repeat(filled) + "░".repeat(empty);
+  return `${"█".repeat(filled)}${"░".repeat(empty)} ${score}/100`;
 }
 
 function escapeHtml(text: string): string {
@@ -47,7 +44,7 @@ export async function sendNewsAlert(items: NewsItem[]): Promise<number> {
       `${icon} <b>${escapeHtml(item.title)}</b>`,
       ``,
       labelLine,
-      `📊 ${scoreBar} (${item.score}pt)`,
+      `📊 ${scoreBar}`,
       currencies,
       `🔗 <a href="${item.url}">記事を読む</a>  |  📡 ${escapeHtml(item.source)}`,
     ].filter(Boolean).join("\n");
