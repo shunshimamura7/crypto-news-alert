@@ -2,28 +2,55 @@ import type { NewsItem } from "./cryptocompare";
 
 const TELEGRAM_API = "https://api.telegram.org";
 
-export async function sendNewsAlert(items: NewsItem[]): Promise<void> {
-  const token = process.env.TELEGRAM_BOT_TOKEN!;
+function getIcon(score: number): string {
+  if (score >= 80) return "🚀";
+  if (score >= 50) return "🚨";
+  return "📰";
+}
+
+function buildScoreBar(score: number): string {
+  // 5pt刻み・20ブロックで0〜100を表現
+  const clamped = Math.max(0, Math.min(100, score));
+  const filled  = Math.round(clamped / 5);
+  const empty   = 20 - filled;
+
+  // スコア帯で色を変える
+  const block = score >= 80 ? "🟥" : score >= 50 ? "🟧" : "🟨";
+  return block.repeat(filled) + "░".repeat(empty);
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function sendNewsAlert(items: NewsItem[]): Promise<number> {
+  const token  = process.env.TELEGRAM_BOT_TOKEN!;
   const chatId = process.env.TELEGRAM_CHAT_ID!;
+  let sent = 0;
 
   for (const item of items) {
-    const currencies =
-      item.currencies.length > 0
-        ? item.currencies.map((c) => `#${c}`).join(" ")
-        : "#CRYPTO";
-
-    const icon = item.score >= 8 ? "🚀" : item.score >= 5 ? "🚨" : "📰";
-    const scoreBar = buildScoreBar(item.score);
-    const labelLine = item.scoreLabel ? `${item.scoreLabel}` : "";
+    const icon       = getIcon(item.score);
+    const scoreBar   = buildScoreBar(item.score);
+    const currencies = item.currencies.length > 0
+      ? item.currencies.map((c) => `#${c}`).join(" ")
+      : "#CRYPTO";
+    const labelLine  = item.scoreLabel ? escapeHtml(item.scoreLabel) : "";
 
     const lines = [
       `${icon} <b>${escapeHtml(item.title)}</b>`,
       ``,
-      labelLine ? `${labelLine}` : null,
+      labelLine,
       `📊 ${scoreBar} (${item.score}pt)`,
-      `${currencies}`,
+      currencies,
       `🔗 <a href="${item.url}">記事を読む</a>  |  📡 ${escapeHtml(item.source)}`,
-    ].filter((l) => l !== null).join("\n");
+    ].filter(Boolean).join("\n");
 
     try {
       const res = await fetch(`${TELEGRAM_API}/bot${token}/sendMessage`, {
@@ -40,6 +67,8 @@ export async function sendNewsAlert(items: NewsItem[]): Promise<void> {
       if (!res.ok) {
         const err = await res.json();
         console.error("[telegram] Send failed:", JSON.stringify(err));
+      } else {
+        sent++;
       }
 
       await sleep(1000);
@@ -47,21 +76,6 @@ export async function sendNewsAlert(items: NewsItem[]): Promise<void> {
       console.error("[telegram] Request failed:", err);
     }
   }
-}
 
-function buildScoreBar(score: number): string {
-  const clamped = Math.max(0, Math.min(10, score));
-  const filled = Math.round(clamped);
-  return "█".repeat(filled) + "░".repeat(10 - filled);
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return sent;
 }
