@@ -39,8 +39,25 @@ export async function GET(req: NextRequest) {
 
     // ログ：送信内容を記録
     toSend.forEach((n) => {
-      console.log(`[cron] Sending: [${n.score}pt] ${n.scoreLabel} | ${n.title}`);
+      console.log(`[cron] [${n.score}pt] ${n.scoreLabel} | ${n.title}`);
     });
+
+    // TELEGRAM_BOT_TOKEN 未設定 または ?dry=1 の場合はdry-run
+    const isDryRun = !process.env.TELEGRAM_BOT_TOKEN || req.nextUrl.searchParams.get('dry') === '1';
+    if (isDryRun) {
+      console.log("[cron] DRY-RUN: TELEGRAM_BOT_TOKEN not set, skipping send");
+      return NextResponse.json({
+        dryRun: true,
+        total: allNews.length,
+        newCount: newItems.length,
+        results: toSend.map((n) => ({
+          score: n.score,
+          label: n.scoreLabel,
+          currencies: n.currencies,
+          title: n.title,
+        })),
+      });
+    }
 
     const sent = await sendNewsAlert(toSend);
     await markAsSent(toSend.map((n) => n.id));

@@ -39,6 +39,13 @@ const DROP_KEYWORDS: string[] = [
   'shutdown', 'shuts down',
   'freezes withdrawals', 'suspend withdrawals',
   'exit scam',
+  'trap', 'at risk', 'short positions',
+  'plunge', 'plunges', 'crash', 'crashes',
+  'dump', 'dumps', 'selloff', 'sell-off',
+  'liquidation', 'liquidations',
+  'bear trap', 'dead cat', 'capitulation',
+  'outflow', 'outflows',
+  'delisting', 'delisted', 'warning', 'watchlist',
 ];
 
 // 銘柄フルネーム→シンボル対応テーブル
@@ -241,19 +248,56 @@ const SCORING_RULES: KeywordRule[] = [
   },
 ];
 
+// ヒットしたらスコア×0.5（最初のヒットのみ）
+const SOFT_NEGATIVE_KEYWORDS: string[] = [
+  'concerns', 'concern', 'delayed', 'delay', 'cautious', 'caution',
+  'weak', 'weakness', 'decline', 'declines', 'slump', 'falls', 'drops',
+  'down', 'losing', 'underperform', 'rejected', 'fails', 'fears', 'worry',
+  'volatile', 'volatility', 'uncertain', 'uncertainty', 'pressure',
+  'struggles', 'struggle',
+];
+
+// ソース信頼度
+const SOURCE_HIGH = ['coindesk', 'reuters', 'bloomberg', 'theblock', 'cointelegraph', 'decrypt'];
+const SOURCE_LOW  = ['bitcoinworld', 'ambcrypto', 'cryptopolitan', 'timestabloid', 'cointurken', 'utoday', 'coinotag'];
+
+// "$XXX billion/million" / "USD XXX million" または "XXX億" を抽出してUSD換算
+// $またはUSDが付いていない "257 Billion SHIB" 等は抽出しない
+function extractAmount(text: string): number | null {
+  const enMatch = text.match(/(?:\$|USD\s*)(\d+(?:\.\d+)?)\s*(billion|bn|million|m|b)\b/i);
+  if (enMatch) {
+    const value = parseFloat(enMatch[1]);
+    const unit  = enMatch[2].toLowerCase();
+    if (unit === 'billion' || unit === 'bn' || unit === 'b') return value * 1e9;
+    if (unit === 'million' || unit === 'm')                  return value * 1e6;
+  }
+  const jaMatch = text.match(/(\d+(?:\.\d+)?)億/);
+  if (jaMatch) return parseFloat(jaMatch[1]) * 1e8;
+  return null;
+}
+
+function getScaleScore(amount: number): number {
+  if (amount >= 10e9)  return 50;
+  if (amount >= 1e9)   return 40;
+  if (amount >= 500e6) return 30;
+  if (amount >= 100e6) return 20;
+  return 10;
+}
+
 const MIN_SCORE_WITH_SYMBOL    = 30;
 const MIN_SCORE_WITHOUT_SYMBOL = 55;
 
 // nullを返したらドロップ
 function scoreNews(title: string): { score: number; label: string } | null {
-  const lower = title.toLowerCase();
+  const lower  = title.toLowerCase();
+  const first30 = lower.slice(0, 30);
 
   // ① ネガティブ絶対ドロップ
   for (const kw of DROP_KEYWORDS) {
     if (lower.includes(kw)) return null;
   }
 
-  // ② カテゴリキャップ付きスコアリング
+  // ② カテゴリキャップ付きスコアリング（タイトル前半30文字なら×1.3）
   let mainScore  = 0;
   let bonusScore = 0;
   let topLabel   = "";
@@ -261,14 +305,15 @@ function scoreNews(title: string): { score: number; label: string } | null {
   let first      = true;
 
   for (const rule of SCORING_RULES) {
-    const hit = rule.keywords.some((kw) => lower.includes(kw));
-    if (hit) {
+    const matchedKw = rule.keywords.find((kw) => lower.includes(kw));
+    if (matchedKw) {
+      const posMultiplier = first30.includes(matchedKw) ? 1.3 : 1.0;
       if (first && rule.score > 0) {
-        mainScore = rule.score;
+        mainScore = Math.round(rule.score * posMultiplier);
         first = false;
       } else if (rule.score > 0) {
         // 2個目以降のポジティブは10%ボーナス
-        bonusScore += Math.round(rule.score * 0.1);
+        bonusScore += Math.round(rule.score * 0.1 * posMultiplier);
       } else {
         // ネガティブはそのまま加算
         mainScore += rule.score;
@@ -280,10 +325,25 @@ function scoreNews(title: string): { score: number; label: string } | null {
     }
   }
 
-  // ③ 合計（上限100）
-  const total = Math.min(mainScore + bonusScore, 100);
+  // ③ 規模スコア加算
+  const amount = extractAmount(title);
+  if (amount !== null) {
+    bonusScore += getScaleScore(amount);
+  }
 
-  // ④ 0以下はドロップ
+  // ④ ソフトネガティブ：最初のヒットでスコア×0.5
+  let rawScore = mainScore + bonusScore;
+  for (const kw of SOFT_NEGATIVE_KEYWORDS) {
+    if (lower.includes(kw)) {
+      rawScore = Math.round(rawScore * 0.5);
+      break;
+    }
+  }
+
+  // ⑤ 合計（0〜100クランプ）
+  const total = Math.min(Math.max(0, rawScore), 100);
+
+  // ⑥ 0以下はドロップ
   if (total <= 0) return null;
 
   return { score: total, label: topLabel };
@@ -348,10 +408,17 @@ export async function fetchCryptoCompareNews(
       // 両方マージして重複排除
       const matchedSymbols = [...new Set([...tagMatches, ...nameMatches])];
 
+      // ソース格付けによるスコア補正
+      const srcLower = article.source.toLowerCase();
+      let sourceMult = 1.0;
+      if (SOURCE_HIGH.some((s) => srcLower.includes(s))) sourceMult = 1.2;
+      else if (SOURCE_LOW.some((s) => srcLower.includes(s))) sourceMult = 0.8;
+      const finalScore = Math.min(100, Math.round(scored.score * sourceMult));
+
       const hasSymbol = matchedSymbols.length > 0;
       const minScore  = hasSymbol ? MIN_SCORE_WITH_SYMBOL : MIN_SCORE_WITHOUT_SYMBOL;
 
-      if (scored.score >= minScore) {
+      if (finalScore >= minScore) {
         results.push({
           id: `cc_${article.id}`,
           title: article.title,
@@ -359,8 +426,8 @@ export async function fetchCryptoCompareNews(
           source: article.source,
           publishedAt: new Date(article.published_on * 1000).toISOString(),
           currencies: matchedSymbols,
-          isImportant: scored.score >= 50,
-          score: scored.score,
+          isImportant: finalScore >= 50,
+          score: finalScore,
           scoreLabel: scored.label,
         });
       }
